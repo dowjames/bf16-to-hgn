@@ -1422,9 +1422,12 @@ struct Context {
         hipError_t error = hipGetDeviceProperties(&properties, 0);
         if (error != hipSuccess) return hip_failure(error, "query HIP device 0");
         const char *arch = properties.gcnArchName;
-        if (std::strncmp(arch, "gfx1151", 7) != 0 || (arch[7] != '\0' && arch[7] != ':')) {
+        const bool arch_ok = (std::strncmp(arch, "gfx1151", 7) == 0 ||
+                              std::strncmp(arch, "gfx1201", 7) == 0) &&
+                             (arch[7] == '\0' || arch[7] == ':');
+        if (!arch_ok) {
             std::snprintf(last_error, sizeof(last_error),
-                          "HIP encoding/verification supports only gfx1151; visible device 0 is %s (%s)",
+                          "HIP encoding/verification supports gfx1151/gfx1201; visible device 0 is %s (%s)",
                           properties.name, arch);
             return -2;
         }
@@ -1559,7 +1562,7 @@ template<class Operation> int with_context(Operation operation) {
             int devices = 0;
             const hipError_t error = hipGetDeviceCount(&devices);
             if (error != hipSuccess) return hip_failure(error, "enumerate HIP devices");
-            if (devices == 0) return fail(-2, "no visible HIP device; gfx1151 is required");
+            if (devices == 0) return fail(-2, "no visible HIP device; gfx1151/gfx1201 is required");
         }
         int previous = 0;
         hipError_t error = hipGetDevice(&previous);
